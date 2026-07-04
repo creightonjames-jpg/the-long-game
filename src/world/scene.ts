@@ -36,6 +36,7 @@ export class WorldScene extends Phaser.Scene {
   private paused = false
   private zoom = ZOOM_DEFAULT
   private lastTile = ''
+  private touchVec = { dx: 0, dy: 0 } // set by the on-screen thumbstick via the bus
   private unsubs: (() => void)[] = []
 
   constructor() {
@@ -147,6 +148,7 @@ export class WorldScene extends Phaser.Scene {
         this.gm.setPosition(tx * TILE + 8, ty * TILE + 12)
         this.lastTile = ''
       }),
+      worldBus.on('move', (v: { dx: number; dy: number }) => { this.touchVec = v }),
       worldBus.on('zoom', ({ dir }: { dir: 'in' | 'out' }) => {
         this.zoom = Phaser.Math.Clamp(this.zoom + (dir === 'in' ? ZOOM_STEP : -ZOOM_STEP), ZOOM_MIN, ZOOM_MAX)
         this.cameras.main.zoomTo(this.zoom, 180)
@@ -197,14 +199,20 @@ export class WorldScene extends Phaser.Scene {
     if (this.cursors.up.isDown || this.keys.W.isDown) vy = -SPEED
     else if (this.cursors.down.isDown || this.keys.S.isDown) vy = SPEED
 
-    this.gm.setVelocity(vx, vy)
-    if (vx < 0) this.facing = 'left'
-    else if (vx > 0) this.facing = 'right'
-    else if (vy < 0) this.facing = 'up'
-    else if (vy > 0) this.facing = 'down'
+    // Fall back to the touch thumbstick when no keys are pressed.
+    if (vx === 0 && vy === 0 && (this.touchVec.dx !== 0 || this.touchVec.dy !== 0)) {
+      vx = this.touchVec.dx * SPEED
+      vy = this.touchVec.dy * SPEED
+    }
 
-    if (vx !== 0 || vy !== 0) this.gm.anims.play(this.facing, true)
-    else {
+    this.gm.setVelocity(vx, vy)
+
+    if (vx !== 0 || vy !== 0) {
+      // Face the dominant axis (smoother for diagonal keyboard + analog stick).
+      if (Math.abs(vx) >= Math.abs(vy)) this.facing = vx < 0 ? 'left' : 'right'
+      else this.facing = vy < 0 ? 'up' : 'down'
+      this.gm.anims.play(this.facing, true)
+    } else {
       this.gm.anims.stop()
       this.gm.setFrame({ down: 0, up: 2, left: 4, right: 6 }[this.facing] ?? 0)
     }

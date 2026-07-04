@@ -40,6 +40,11 @@ inhabit in real time. All art is original and generated in code (license-clean).
 
 Classic mode (v1 text scenarios) remains available from the start screen.
 
+**Mobile:** on touch devices the World Edition shows an on-screen thumbstick
+(walk) and a context button (HANDLE / TALK); landscape is recommended. Append
+`?touch` to the URL to force the touch controls on any device (QA / fallback).
+Classic mode works on any phone as-is.
+
 ## Run it
 
 ```bash

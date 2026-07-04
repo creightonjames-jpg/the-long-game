@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef, useState } from 'react'
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import type Phaser from 'phaser'
 import { createWorldGame } from '../../world/scene'
 import { worldBus } from '../../world/bus'
@@ -10,6 +10,7 @@ import { earnedBadges } from '../../engine/scoring'
 import { recordRun } from '../../engine/persistence'
 import { AlertToasts, EventOverlay, HeardOverlay, WorldHud } from './WorldUI'
 import { DayRecap, IntroScreen, SeasonScreen, WorldEnd } from './WorldScreens'
+import { TouchControls } from './TouchControls'
 
 const SAVE_KEY = 'club-gm-sim:world-save:v1'
 
@@ -36,6 +37,15 @@ export default function WorldGame() {
   const timeScaleRef = useRef(1)
   const recordedRef = useRef(false)
   const [hasSave] = useState(() => loadWorldSave() !== null)
+  const [isTouch] = useState(() => {
+    if (typeof window === 'undefined') return false
+    // `?touch` forces the on-screen controls — a QA hook and a fallback for any
+    // device whose pointer type is misreported.
+    if (new URLSearchParams(window.location.search).has('touch')) return true
+    return !!window.matchMedia?.('(pointer: coarse)').matches
+  })
+  const [portrait, setPortrait] = useState(false)
+  const [hintDismissed, setHintDismissed] = useState(false)
 
   // --- Phaser mount (guarded: StrictMode double-mount and HMR safe) ---
   useEffect(() => {
@@ -107,26 +117,39 @@ export default function WorldGame() {
     prevActiveRef.current = now
   }, [state.active])
 
-  // --- Interaction: E handles the nearest event, else chats with an NPC ---
+  // --- Interaction: handles the nearest event, else chats with an NPC ---
   const near = nearestInteraction(state, gmTile)
+  const handleInteract = useCallback(() => {
+    const s = stateRef.current
+    if (s.screen !== 'play') return
+    const hit = nearestInteraction(s, gmTile)
+    if (hit?.kind === 'event') dispatch({ type: 'OPEN_EVENT', defId: hit.id })
+    else if (hit?.kind === 'npc') {
+      const npc = NPCS.find((n) => n.id === hit.id)
+      if (npc) {
+        setNpcSay({ name: npc.name, text: npc.flavor })
+        setTimeout(() => setNpcSay(null), 3500)
+      }
+    }
+  }, [gmTile])
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'e' && e.key !== 'E' && e.key !== ' ') return
-      const s = stateRef.current
-      if (s.screen !== 'play') return
-      const hit = nearestInteraction(s, gmTile)
-      if (hit?.kind === 'event') dispatch({ type: 'OPEN_EVENT', defId: hit.id })
-      else if (hit?.kind === 'npc') {
-        const npc = NPCS.find((n) => n.id === hit.id)
-        if (npc) {
-          setNpcSay({ name: npc.name, text: npc.flavor })
-          setTimeout(() => setNpcSay(null), 3500)
-        }
-      }
+      if (e.key === 'e' || e.key === 'E' || e.key === ' ') handleInteract()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [gmTile])
+  }, [handleInteract])
+
+  // --- Track orientation for the landscape hint on touch devices ---
+  useEffect(() => {
+    if (!isTouch || typeof window === 'undefined') return
+    const mq = window.matchMedia('(orientation: portrait)')
+    const update = () => setPortrait(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [isTouch])
 
   // --- Persistence: save at safe checkpoints, record the run at the end ---
   useEffect(() => {
@@ -175,6 +198,26 @@ export default function WorldGame() {
     <div className="fixed inset-0 bg-club-900">
       <div ref={hostRef} className="absolute inset-0" />
 
+      {isTouch && portrait && !hintDismissed && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 rounded-full bg-club-900/90 px-4 py-2 shadow-lg">
+          <span className="text-cream-100 text-xs font-semibold">↻ Rotate to landscape for the best view</span>
+          <button onClick={() => setHintDismissed(true)} className="text-cream-200/70 text-sm">
+            ✕
+          </button>
+        </div>
+      )}
+
+      {isTouch && state.screen === 'play' && !userPaused && (
+        <TouchControls
+          near={
+            near
+              ? { kind: near.kind, label: near.kind === 'event' ? ALL_EVENTS[near.id].toast : near.label }
+              : null
+          }
+          onInteract={handleInteract}
+        />
+      )}
+
       {state.screen !== 'intro' && state.screen !== 'end' && (
         <>
           <WorldHud
@@ -202,7 +245,7 @@ export default function WorldGame() {
       {/* Location + interaction prompt */}
       {state.screen === 'play' && (
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 text-center space-y-1.5">
-          {near && (
+          {near && !isTouch && (
             <p className="bg-gold-500 text-club-900 text-xs font-bold px-3 py-1.5 rounded-full shadow">
               [E] {near.kind === 'event' ? `Handle: ${ALL_EVENTS[near.id].toast}` : `Chat with ${near.label}`}
             </p>
@@ -225,6 +268,7 @@ export default function WorldGame() {
       {state.screen === 'intro' && (
         <IntroScreen
           hasSave={hasSave}
+          isTouch={isTouch}
           onStart={(name) => {
             worldBus.emit('warp', SPAWN) // fresh tenure starts at the front walk
             dispatch({ type: 'START', playerName: name })

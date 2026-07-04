@@ -64,10 +64,12 @@ function CultureRows({ state }: { state: WorldState }) {
 
 export function IntroScreen({
   hasSave,
+  isTouch,
   onStart,
   onResume,
 }: {
   hasSave: boolean
+  isTouch: boolean
   onStart: (name: string) => void
   onResume: () => void
 }) {
@@ -85,8 +87,13 @@ export function IntroScreen({
         limited time to get there before things escalate. You can't be everywhere: triage is the job.
       </p>
       <div className="bg-cream-100 rounded-lg p-4 text-xs text-club-900/70 leading-relaxed mb-6">
-        <b>Controls:</b> Arrows / WASD to walk · <b>E</b> to handle a situation (or chat) ·
-        doors teleport you inside/outside the clubhouse.<br />
+        <b>Controls:</b>{' '}
+        {isTouch ? (
+          <>the on-screen joystick to walk · the <b>HANDLE / TALK</b> button to act (best in landscape)</>
+        ) : (
+          <>Arrows / WASD to walk · <b>E</b> to handle a situation (or chat)</>
+        )}{' '}
+        · doors teleport you inside/outside the clubhouse.<br />
         <b>Judged on:</b> the four club stats <i>and</i> the culture card — Safety, Courtesy,
         Show, Efficiency. Choices are shuffled and nothing is free.
       </div>
