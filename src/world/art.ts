@@ -35,6 +35,8 @@ const P = {
   green2: '#2f7d4f',
   khaki: '#b6a06a',
   red: '#b23b32',
+  gold: '#c9a227',
+  goldDk: '#a8851a',
 }
 
 type Grid = (string | null)[][]
@@ -108,7 +110,9 @@ function tileRoof(): Grid {
 }
 function tileFloor(): Grid {
   const g = fill(P.floor)
-  for (let x = 0; x < 16; x++) { g[0][x] = P.floorDk; g[8][x] = P.floorDk }
+  // Subtle checker so interior rooms read as tiled floor, not empty space.
+  for (let y = 0; y < 16; y++)
+    for (let x = 0; x < 16; x++) if ((Math.floor(x / 4) + Math.floor(y / 4)) % 2 === 0) g[y][x] = P.floorDk
   return g
 }
 function tileGreen(): Grid {
@@ -125,6 +129,8 @@ function tileFlower(): Grid {
 function tileDoor(): Grid {
   const g = tileWall()
   for (let y = 3; y < 16; y++) for (let x = 4; x < 12; x++) g[y][x] = P.door
+  // Gold arch so entrances read as doors from a distance.
+  for (let x = 4; x < 12; x++) g[3][x] = P.gold
   return g
 }
 function tileCourt(): Grid {
@@ -182,6 +188,49 @@ export const CHAR_PALETTES: Record<string, CharPalette> = {
   staff: { skin: P.skin, hair: '#2a2a1a', shirt: '#2f8f8a', shirtDk: '#1f6a66', pants: P.dark },
 }
 
+export type Accessory = 'none' | 'toque' | 'cap' | 'visor' | 'sunhat' | 'tie' | 'apron'
+
+// Headwear/uniform details so a glance tells you the role — the chef's toque,
+// the super's ball cap, the pro's visor, the member's sun hat, the GM's tie.
+function drawAccessory(
+  ctx: CanvasRenderingContext2D,
+  ox: number,
+  oy: number,
+  acc: Accessory,
+  p: CharPalette,
+) {
+  const px = (x: number, y: number, c: string) => { ctx.fillStyle = c; ctx.fillRect(ox + x, oy + y, 1, 1) }
+  const r = (x: number, y: number, w: number, h: number, c: string) => { ctx.fillStyle = c; ctx.fillRect(ox + x, oy + y, w, h) }
+  switch (acc) {
+    case 'toque': // tall white chef's hat
+      r(5, 0, 6, 2, P.white)
+      r(4, 2, 8, 1, P.white)
+      break
+    case 'cap': // ball cap in the shirt's dark accent, brim forward
+      r(4, 1, 8, 2, p.shirtDk)
+      r(9, 3, 4, 1, p.shirtDk)
+      break
+    case 'visor': // sun visor — brim only, hair shows above
+      r(3, 3, 10, 1, P.gold)
+      break
+    case 'sunhat': // wide-brim member hat
+      r(5, 0, 6, 1, P.khaki)
+      r(3, 1, 10, 1, P.khaki)
+      break
+    case 'tie': // management tie + collar
+      px(6, 10, P.white)
+      px(9, 10, P.white)
+      r(7, 11, 2, 5, P.gold)
+      break
+    case 'apron': // F&B apron over the torso
+      r(5, 12, 6, 6, P.white)
+      break
+    case 'none':
+    default:
+      break
+  }
+}
+
 // dir: 0 down, 1 up, 2 left, 3 right ; frame: 0 stand, 1 step
 function drawChar(
   ctx: CanvasRenderingContext2D,
@@ -190,6 +239,7 @@ function drawChar(
   p: CharPalette,
   dir: number,
   frame: number,
+  acc: Accessory = 'none',
 ) {
   const px = (x: number, y: number, c: string) => { ctx.fillStyle = c; ctx.fillRect(ox + x, oy + y, 1, 1) }
   const r = (x: number, y: number, w: number, h: number, c: string) => { ctx.fillStyle = c; ctx.fillRect(ox + x, oy + y, w, h) }
@@ -215,25 +265,48 @@ function drawChar(
     r(4, legY, 3, 6, p.pants)
     r(10, legY, 3, 6, p.pants)
   }
+  drawAccessory(ctx, ox, oy, acc, p)
 }
 
 /** Animated 8-frame sheet (4 directions × 2 frames), 16×24 each. */
-export function bakeCharSheet(paletteKey: string): string {
+export function bakeCharSheet(paletteKey: string, acc: Accessory = 'none'): string {
   const p = CHAR_PALETTES[paletteKey]
   const [c, ctx] = canvasOf(16 * 8, 24)
   let f = 0
   for (let dir = 0; dir < 4; dir++)
     for (let frame = 0; frame < 2; frame++) {
-      drawChar(ctx, f * 16, 0, p, dir, frame)
+      drawChar(ctx, f * 16, 0, p, dir, frame, acc)
       f++
     }
   return c.toDataURL()
 }
 
-/** Static front-facing 16×24 NPC frame. */
-export function bakeNpc(paletteKey: string): string {
+/** Static front-facing 16×24 NPC frame with its role costume. */
+export function bakeNpc(paletteKey: string, acc: Accessory = 'none'): string {
   const p = CHAR_PALETTES[paletteKey]
   const [c, ctx] = canvasOf(16, 24)
-  drawChar(ctx, 0, 0, p, 0, 0)
+  drawChar(ctx, 0, 0, p, 0, 0, acc)
+  return c.toDataURL()
+}
+
+/** Cedar Ridge crest — a small gold-bordered green shield with a flag. */
+export function bakeLogo(): string {
+  const [c, ctx] = canvasOf(24, 24)
+  const px = (x: number, y: number, col: string) => { ctx.fillStyle = col; ctx.fillRect(x, y, 1, 1) }
+  // Shield silhouette: full width up top, tapering to a point.
+  for (let y = 2; y < 22; y++) {
+    const inset = y < 14 ? 3 : 3 + Math.floor((y - 14) * 1.6)
+    const x0 = inset
+    const x1 = 23 - inset
+    if (x1 <= x0) continue
+    for (let x = x0; x <= x1; x++) {
+      const border = x === x0 || x === x1 || y === 2 || y >= 21
+      px(x, y, border ? P.gold : P.green2)
+    }
+  }
+  // Flag on a pole, center.
+  for (let y = 6; y < 15; y++) px(11, y, P.white)
+  for (let x = 12; x < 16; x++) { px(x, 6, P.red); px(x, 7, P.red); px(x, 8, P.red) }
+  px(15, 9, P.red)
   return c.toDataURL()
 }

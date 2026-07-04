@@ -143,27 +143,92 @@ export const ANCHORS: Record<string, { tx: number; ty: number }> = {
   'Clubhouse Lobby': { tx: 19, ty: 42 },
 }
 
+export type NpcCategory = 'member' | 'board' | 'staff'
+export type NpcAccessory = 'none' | 'toque' | 'cap' | 'visor' | 'sunhat' | 'tie' | 'apron'
+
 export interface NpcSpec {
   id: string
   name: string
+  role: string
+  category: NpcCategory
   palette: string
+  accessory: NpcAccessory
   tx: number
   ty: number
   flavor: string
 }
 
 export const NPCS: NpcSpec[] = [
-  { id: 'pro', name: 'Head Pro', palette: 'pro', tx: 6, ty: 13, flavor: '"Tee sheet\'s full through two o\'clock. Good day to be us."' },
-  { id: 'president', name: 'Hal Whitmore', palette: 'board', tx: 21, ty: 13, flavor: '"Walk with me sometime — the members like seeing their GM outside."' },
-  { id: 'member', name: 'Mrs. Ashford', palette: 'member', tx: 12, ty: 16, flavor: '"Lovely morning! The hydrangeas by the ninth are spectacular this year."' },
-  { id: 'super', name: 'Superintendent', palette: 'super', tx: 26, ty: 27, flavor: '"Greens are rolling true today. Don\'t let anyone tell you different."' },
-  { id: 'aquatics', name: 'Aquatics Mgr', palette: 'staff', tx: 8, ty: 23, flavor: '"Chairs out, chemicals balanced, guards briefed. We\'re ready."' },
-  { id: 'tennis', name: 'Tennis Pro', palette: 'staff', tx: 16, ty: 23, flavor: '"Clinic at four — we\'ve got twelve juniors signed up. Twelve!"' },
-  { id: 'chef', name: 'Chef Laurent', palette: 'chef', tx: 18, ty: 37, flavor: '"Taste this reduction later. It will change your afternoon."' },
-  { id: 'elena', name: 'Elena Ruiz', palette: 'fnb', tx: 8, ty: 37, flavor: '"Forty-two covers on the books tonight. The room will sing."' },
-  { id: 'catering', name: 'Danielle', palette: 'staff', tx: 30, ty: 37, flavor: '"Saturday\'s floor plan is on your desk. Third revision. Don\'t ask."' },
-  { id: 'controller', name: 'Controller', palette: 'suit', tx: 6, ty: 45, flavor: '"Month-end close is Tuesday. I\'ll have the variance detail ready."' },
-  { id: 'facilities', name: 'Gus', palette: 'suit', tx: 29, ty: 45, flavor: '"Boiler\'s humming. She\'s older than both of us, but she\'s humming."' },
+  { id: 'pro', name: 'Rick Delgado', role: 'Head Golf Professional', category: 'staff', palette: 'pro', accessory: 'visor', tx: 6, ty: 13, flavor: '"Tee sheet\'s full through two o\'clock. Good day to be us."' },
+  { id: 'president', name: 'Hal Whitmore', role: 'Board President', category: 'board', palette: 'board', accessory: 'tie', tx: 21, ty: 13, flavor: '"Walk with me sometime — the members like seeing their GM outside."' },
+  { id: 'member', name: 'Mrs. Ashford', role: 'Member', category: 'member', palette: 'member', accessory: 'sunhat', tx: 12, ty: 16, flavor: '"Lovely morning! The hydrangeas by the ninth are spectacular this year."' },
+  { id: 'super', name: 'Tom Bradley', role: 'Course Superintendent', category: 'staff', palette: 'super', accessory: 'cap', tx: 26, ty: 27, flavor: '"Greens are rolling true today. Don\'t let anyone tell you different."' },
+  { id: 'aquatics', name: 'Jordan Pace', role: 'Aquatics Manager', category: 'staff', palette: 'staff', accessory: 'cap', tx: 8, ty: 23, flavor: '"Chairs out, chemicals balanced, guards briefed. We\'re ready."' },
+  { id: 'tennis', name: 'Sofia Marin', role: 'Tennis Professional', category: 'staff', palette: 'staff', accessory: 'visor', tx: 16, ty: 23, flavor: '"Clinic at four — we\'ve got twelve juniors signed up. Twelve!"' },
+  { id: 'chef', name: 'Chef Laurent', role: 'Executive Chef', category: 'staff', palette: 'chef', accessory: 'toque', tx: 18, ty: 37, flavor: '"Taste this reduction later. It will change your afternoon."' },
+  { id: 'elena', name: 'Elena Ruiz', role: 'F&B Director', category: 'staff', palette: 'fnb', accessory: 'apron', tx: 8, ty: 37, flavor: '"Forty-two covers on the books tonight. The room will sing."' },
+  { id: 'catering', name: 'Danielle Cho', role: 'Catering Director', category: 'staff', palette: 'staff', accessory: 'none', tx: 30, ty: 37, flavor: '"Saturday\'s floor plan is on your desk. Third revision. Don\'t ask."' },
+  { id: 'controller', name: 'Priya Nair', role: 'Controller', category: 'staff', palette: 'suit', accessory: 'tie', tx: 6, ty: 45, flavor: '"Month-end close is Tuesday. I\'ll have the variance detail ready."' },
+  { id: 'facilities', name: 'Gus Hartley', role: 'Facilities Manager', category: 'staff', palette: 'suit', accessory: 'cap', tx: 29, ty: 45, flavor: '"Boiler\'s humming. She\'s older than both of us, but she\'s humming."' },
+  { id: 'member2', name: 'Mr. Petrakis', role: 'Member', category: 'member', palette: 'board', accessory: 'none', tx: 5, ty: 4, flavor: '"Morning. Fine day for it, if the wind lays down on the back nine."' },
+  { id: 'member3', name: 'The Vances', role: 'Member', category: 'member', palette: 'member', accessory: 'sunhat', tx: 33, ty: 24, flavor: '"The kids have their first lesson today. They\'re thrilled. We\'re nervous."' },
 ]
+
+// Building & room signage — drawn as world-anchored labels with an emoji emblem.
+export interface Sign {
+  label: string
+  icon: string
+  tx: number
+  ty: number
+  big?: boolean
+}
+
+export const SIGNS: Sign[] = [
+  // Exterior buildings
+  { label: 'Pro Shop', icon: '🏌️', tx: 6, ty: 7, big: true },
+  { label: 'Pool', icon: '🏊', tx: 6, ty: 17, big: true },
+  { label: 'Tennis Courts', icon: '🎾', tx: 16, ty: 18, big: true },
+  { label: 'Golf Course', icon: '⛳', tx: 31, ty: 2, big: true },
+  { label: 'Driving Range', icon: '🏌️', tx: 34, ty: 20 },
+  { label: 'Maintenance', icon: '🚜', tx: 26, ty: 21 },
+  // Interior clubhouse rooms
+  { label: 'Dining Room', icon: '🍽️', tx: 7, ty: 33 },
+  { label: 'Kitchen', icon: '👨‍🍳', tx: 19, ty: 33 },
+  { label: 'Ballroom', icon: '🎉', tx: 31, ty: 33 },
+  { label: 'Admin Offices', icon: '🗄️', tx: 7, ty: 44 },
+  { label: 'Fitness', icon: '🏋️', tx: 19, ty: 44 },
+  { label: 'Facilities', icon: '🔧', tx: 31, ty: 44 },
+  { label: 'Lobby', icon: '🏛️', tx: 19, ty: 41 },
+]
+
+// Cedar Ridge crest placements (rendered from the baked 'logo' sprite).
+export const LOGOS: { tx: number; ty: number; label?: string }[] = [
+  { tx: 19, ty: 8, label: 'Cedar Ridge Country Club' }, // clubhouse roof
+  { tx: 6, ty: 2, label: 'Cedar Ridge · Welcome' }, // property entrance / parking
+]
+
+// Event marker icons + animation style, keyed by event id (default fallback below).
+export const EVENT_ICONS: Record<string, { icon: string; anim: 'flicker' | 'bob' }> = {
+  'x-grease-fire': { icon: '🔥', anim: 'flicker' },
+  'x-lightning': { icon: '⚡', anim: 'flicker' },
+  'x-irrigation': { icon: '💧', anim: 'bob' },
+  'x-pool-slip': { icon: '🩹', anim: 'bob' },
+  'x-windshield': { icon: '🚗', anim: 'bob' },
+  'x-cooler': { icon: '🧊', anim: 'bob' },
+  'x-pos-crash': { icon: '💻', anim: 'flicker' },
+  'x-berate': { icon: '😠', anim: 'bob' },
+  'x-bartender': { icon: '🍸', anim: 'bob' },
+  'x-inspection': { icon: '📋', anim: 'bob' },
+  'x-dress-code': { icon: '👖', anim: 'bob' },
+  'x-double-book': { icon: '📅', anim: 'bob' },
+  'x-vip-walkin': { icon: '⭐', anim: 'flicker' },
+}
+
+export function eventIcon(id: string): { icon: string; anim: 'flicker' | 'bob' } {
+  if (EVENT_ICONS[id]) return EVENT_ICONS[id]
+  if (id.startsWith('heard')) return { icon: '💬', anim: 'bob' }
+  if (id.startsWith('duty')) return { icon: '📋', anim: 'bob' }
+  return { icon: '❗', anim: 'bob' }
+}
 
 export const SPAWN = { tx: 19, ty: 15 }

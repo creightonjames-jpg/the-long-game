@@ -36,10 +36,16 @@ export function cultureAvg(culture: Record<CultureKey, number>): number {
 
 export function WorldHud({
   state,
+  paused,
   onWait,
+  onPause,
+  onZoom,
 }: {
   state: WorldState
+  paused: boolean
   onWait: () => void
+  onPause: () => void
+  onZoom: (dir: 'in' | 'out') => void
 }) {
   const script = SEASON_SCRIPTS[state.seasonIndex]
   const cult = cultureAvg(state.culture)
@@ -68,13 +74,36 @@ export function WorldHud({
           </div>
         </div>
         <span className="ml-auto text-gold-500 text-xs font-bold">{state.xp} XP</span>
-        <button
-          onClick={onWait}
-          className="text-[10px] text-cream-200/70 border border-cream-200/30 rounded px-2 py-0.5 hover:bg-white/10"
-          title="Let an hour pass"
-        >
-          ⏩ Wait 1hr
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => onZoom('out')}
+            className="text-[11px] text-cream-200/80 border border-cream-200/30 rounded w-6 h-6 hover:bg-white/10"
+            title="Zoom out ( - )"
+          >
+            −
+          </button>
+          <button
+            onClick={() => onZoom('in')}
+            className="text-[11px] text-cream-200/80 border border-cream-200/30 rounded w-6 h-6 hover:bg-white/10"
+            title="Zoom in ( + )"
+          >
+            +
+          </button>
+          <button
+            onClick={onPause}
+            className="text-[10px] text-cream-200/80 border border-cream-200/30 rounded px-2 h-6 hover:bg-white/10"
+            title="Pause / resume ( P )"
+          >
+            {paused ? '▶ Resume' : '⏸ Pause'}
+          </button>
+          <button
+            onClick={onWait}
+            className="text-[10px] text-cream-200/70 border border-cream-200/30 rounded px-2 h-6 hover:bg-white/10"
+            title="Let an hour pass"
+          >
+            ⏩ Wait 1hr
+          </button>
+        </div>
       </div>
     </div>
   )

@@ -32,6 +32,7 @@ export default function WorldGame() {
   stateRef.current = state
   const [gmTile, setGmTile] = useState({ tx: 19, ty: 15, zone: 'The Grounds' })
   const [npcSay, setNpcSay] = useState<{ name: string; text: string } | null>(null)
+  const [userPaused, setUserPaused] = useState(false)
   const timeScaleRef = useRef(1)
   const recordedRef = useRef(false)
   const [hasSave] = useState(() => loadWorldSave() !== null)
@@ -64,17 +65,32 @@ export default function WorldGame() {
     }
   }, [])
 
-  // --- Clock: ticks only while playing ---
+  // --- Clock: ticks only while actively playing and not paused ---
   useEffect(() => {
-    if (state.screen !== 'play') return
+    if (state.screen !== 'play' || userPaused) return
     const iv = setInterval(() => dispatch({ type: 'TICK', minutes: 3 * timeScaleRef.current }), 300)
     return () => clearInterval(iv)
-  }, [state.screen])
+  }, [state.screen, userPaused])
 
-  // --- Pause/resume the Phaser scene with the screen ---
+  // --- Pause/resume the Phaser scene with the screen and the pause toggle ---
   useEffect(() => {
-    worldBus.emit(state.screen === 'play' ? 'resume' : 'pause')
-  }, [state.screen])
+    worldBus.emit(state.screen === 'play' && !userPaused ? 'resume' : 'pause')
+  }, [state.screen, userPaused])
+
+  // --- Keyboard: P pauses, +/- zoom the camera ---
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'p' || e.key === 'P') {
+        if (stateRef.current.screen === 'play') setUserPaused((v) => !v)
+      } else if (e.key === '=' || e.key === '+') {
+        worldBus.emit('zoom', { dir: 'in' })
+      } else if (e.key === '-' || e.key === '_') {
+        worldBus.emit('zoom', { dir: 'out' })
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   // --- Marker sync: diff active events into the scene ---
   const prevActiveRef = useRef<string[]>([])
@@ -161,9 +177,26 @@ export default function WorldGame() {
 
       {state.screen !== 'intro' && state.screen !== 'end' && (
         <>
-          <WorldHud state={state} onWait={() => dispatch({ type: 'TICK', minutes: 60 })} />
+          <WorldHud
+            state={state}
+            paused={userPaused}
+            onWait={() => dispatch({ type: 'TICK', minutes: 60 })}
+            onPause={() => setUserPaused((v) => !v)}
+            onZoom={(dir) => worldBus.emit('zoom', { dir })}
+          />
           <AlertToasts state={state} />
         </>
+      )}
+
+      {userPaused && state.screen === 'play' && (
+        <button
+          onClick={() => setUserPaused(false)}
+          className="absolute inset-0 z-20 flex items-center justify-center bg-club-900/60 backdrop-blur-sm"
+        >
+          <span className="bg-cream-100 text-club-900 font-display text-2xl font-bold px-8 py-5 rounded-xl shadow-xl">
+            ⏸ Paused — click or press P to resume
+          </span>
+        </button>
       )}
 
       {/* Location + interaction prompt */}

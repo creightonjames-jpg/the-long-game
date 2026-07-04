@@ -1,10 +1,30 @@
 import Phaser from 'phaser'
-import { bakeCharSheet, bakeNpc, bakeTerrain, CHAR_PALETTES, COLLISION_INDICES } from './art'
-import { buildMap, MAP_H, MAP_W, NPCS, SPAWN, TELEPORTS, ZONES } from './map'
+import { bakeCharSheet, bakeLogo, bakeNpc, bakeTerrain, COLLISION_INDICES } from './art'
+import {
+  buildMap,
+  eventIcon,
+  LOGOS,
+  MAP_H,
+  MAP_W,
+  NPCS,
+  SIGNS,
+  SPAWN,
+  TELEPORTS,
+  ZONES,
+  type NpcCategory,
+} from './map'
 import { TILE, worldBus } from './bus'
 
 const SPEED = 96
-const SEVERITY_COLORS: Record<number, string> = { 1: '#e8c84a', 2: '#f08a3c', 3: '#e04a3a' }
+const ZOOM_MIN = 1.5
+const ZOOM_MAX = 3.75
+const ZOOM_DEFAULT = 2.25
+
+const CATEGORY_BG: Record<NpcCategory, string> = {
+  member: '#a8851a',
+  board: '#8a2c25',
+  staff: '#1f6a66',
+}
 
 export class WorldScene extends Phaser.Scene {
   private gm!: Phaser.Physics.Arcade.Sprite
@@ -13,6 +33,7 @@ export class WorldScene extends Phaser.Scene {
   private markers = new Map<string, Phaser.GameObjects.Container>()
   private facing = 'down'
   private paused = false
+  private zoom = ZOOM_DEFAULT
   private lastTile = ''
   private unsubs: (() => void)[] = []
 
@@ -22,9 +43,10 @@ export class WorldScene extends Phaser.Scene {
 
   preload() {
     this.load.spritesheet('terrain', bakeTerrain(), { frameWidth: TILE, frameHeight: TILE })
-    this.load.spritesheet('gm', bakeCharSheet('gm'), { frameWidth: 16, frameHeight: 24 })
-    for (const key of Object.keys(CHAR_PALETTES)) {
-      if (key !== 'gm') this.load.image(`npc-${key}`, bakeNpc(key))
+    this.load.spritesheet('gm', bakeCharSheet('gm', 'tie'), { frameWidth: 16, frameHeight: 24 })
+    this.load.image('logo', bakeLogo())
+    for (const spec of NPCS) {
+      this.load.image(`npc-${spec.id}`, bakeNpc(spec.palette, spec.accessory))
     }
   }
 
@@ -33,6 +55,41 @@ export class WorldScene extends Phaser.Scene {
     const tiles = map.addTilesetImage('terrain')!
     const layer = map.createLayer(0, tiles, 0, 0)!
     layer.setCollision(COLLISION_INDICES)
+
+    // Cedar Ridge crests on the clubhouse and at the entrance.
+    for (const l of LOGOS) {
+      this.add.image(l.tx * TILE + 8, l.ty * TILE + 8, 'logo').setDepth(8)
+      if (l.label) {
+        this.add
+          .text(l.tx * TILE + 8, l.ty * TILE + 22, l.label, {
+            fontFamily: 'Georgia, serif',
+            fontSize: '8px',
+            fontStyle: 'bold',
+            color: '#faf7ef',
+            backgroundColor: '#14351fcc',
+            padding: { x: 4, y: 2 },
+          })
+          .setOrigin(0.5)
+          .setResolution(3)
+          .setDepth(22)
+      }
+    }
+
+    // Building & room signage.
+    for (const s of SIGNS) {
+      this.add
+        .text(s.tx * TILE + 8, s.ty * TILE + 8, `${s.icon} ${s.label}`, {
+          fontFamily: 'monospace',
+          fontSize: s.big ? '9px' : '8px',
+          fontStyle: 'bold',
+          color: '#faf7ef',
+          backgroundColor: '#14351fdd',
+          padding: { x: 4, y: 2 },
+        })
+        .setOrigin(0.5)
+        .setResolution(3)
+        .setDepth(23)
+    }
 
     this.gm = this.physics.add.sprite(SPAWN.tx * TILE + 8, SPAWN.ty * TILE + 12, 'gm', 0)
     this.gm.setSize(12, 10).setOffset(2, 14).setDepth(10)
@@ -48,13 +105,26 @@ export class WorldScene extends Phaser.Scene {
     }
 
     for (const spec of NPCS) {
-      this.add.sprite(spec.tx * TILE + 8, spec.ty * TILE + 12, `npc-${spec.palette}`).setDepth(9)
+      this.add.sprite(spec.tx * TILE + 8, spec.ty * TILE + 12, `npc-${spec.id}`).setDepth(9)
+      const baseY = spec.ty * TILE - 8
       this.add
-        .text(spec.tx * TILE + 8, spec.ty * TILE - 8, spec.name, {
+        .text(spec.tx * TILE + 8, baseY, spec.name, {
           fontFamily: 'monospace',
           fontSize: '7px',
           color: '#ffffff',
-          backgroundColor: '#00000088',
+          backgroundColor: '#00000099',
+          padding: { x: 2, y: 1 },
+        })
+        .setOrigin(0.5)
+        .setResolution(3)
+        .setDepth(20)
+      this.add
+        .text(spec.tx * TILE + 8, baseY + 8, spec.role, {
+          fontFamily: 'monospace',
+          fontSize: '6px',
+          color: '#ffffff',
+          backgroundColor: CATEGORY_BG[spec.category],
+          padding: { x: 2, y: 1 },
         })
         .setOrigin(0.5)
         .setResolution(3)
@@ -63,20 +133,22 @@ export class WorldScene extends Phaser.Scene {
 
     this.cameras.main.setBounds(0, 0, MAP_W * TILE, MAP_H * TILE)
     this.cameras.main.startFollow(this.gm, true, 0.15, 0.15)
-    this.cameras.main.setZoom(2.25)
+    this.cameras.main.setZoom(this.zoom)
     this.cameras.main.setBackgroundColor('#14351f')
 
     this.cursors = this.input.keyboard!.createCursorKeys()
     this.keys = this.input.keyboard!.addKeys('W,A,S,D') as Record<string, Phaser.Input.Keyboard.Key>
 
-    // React → Phaser. Handlers are re-registered per scene instance (HMR-safe);
-    // unsubscribed on shutdown so stale scenes never receive events.
     this.unsubs = [
       worldBus.on('pause', () => { this.paused = true; this.gm.setVelocity(0); this.gm.anims.stop() }),
       worldBus.on('resume', () => { this.paused = false }),
       worldBus.on('warp', ({ tx, ty }: { tx: number; ty: number }) => {
         this.gm.setPosition(tx * TILE + 8, ty * TILE + 12)
         this.lastTile = ''
+      }),
+      worldBus.on('zoom', ({ dir }: { dir: 'in' | 'out' }) => {
+        this.zoom = Phaser.Math.Clamp(this.zoom + (dir === 'in' ? 0.5 : -0.5), ZOOM_MIN, ZOOM_MAX)
+        this.cameras.main.zoomTo(this.zoom, 180)
       }),
       worldBus.on('marker:add', (m: { id: string; tx: number; ty: number; severity: number }) => this.addMarker(m)),
       worldBus.on('marker:remove', ({ id }: { id: string }) => {
@@ -90,26 +162,25 @@ export class WorldScene extends Phaser.Scene {
     })
 
     worldBus.emit('ready')
-    if (import.meta.env.DEV) (window as any).__worldScene = this
+    if (import.meta.env.DEV) (window as unknown as { __worldScene: WorldScene }).__worldScene = this
   }
 
   private addMarker(m: { id: string; tx: number; ty: number; severity: number }) {
     if (this.markers.has(m.id)) return
+    const { icon, anim } = eventIcon(m.id)
     const x = m.tx * TILE + 8
-    const y = m.ty * TILE - 4
-    const bang = this.add
-      .text(0, 0, '!', {
-        fontFamily: 'monospace',
-        fontSize: '14px',
-        fontStyle: 'bold',
-        color: '#ffffff',
-        backgroundColor: SEVERITY_COLORS[m.severity] ?? '#e04a3a',
-        padding: { x: 4, y: 1 },
-      })
+    const y = m.ty * TILE - 6
+    const glyph = this.add
+      .text(0, 0, icon, { fontFamily: 'sans-serif', fontSize: '15px' })
       .setOrigin(0.5)
       .setResolution(3)
-    const container = this.add.container(x, y, [bang]).setDepth(30)
-    this.tweens.add({ targets: container, y: y - 5, duration: 420, yoyo: true, repeat: -1, ease: 'sine.inout' })
+    const container = this.add.container(x, y, [glyph]).setDepth(31)
+    if (anim === 'flicker') {
+      this.tweens.add({ targets: glyph, alpha: 0.35, duration: 180, yoyo: true, repeat: -1, ease: 'sine.inout' })
+      this.tweens.add({ targets: container, scale: 1.25, duration: 300, yoyo: true, repeat: -1, ease: 'sine.inout' })
+    } else {
+      this.tweens.add({ targets: container, y: y - 5, duration: 420, yoyo: true, repeat: -1, ease: 'sine.inout' })
+    }
     this.markers.set(m.id, container)
   }
 
