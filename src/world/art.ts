@@ -268,6 +268,84 @@ function drawChar(
   drawAccessory(ctx, ox, oy, acc, p)
 }
 
+// The player character: a bespoke suited GM — navy suit jacket + trousers,
+// white shirt with a red tie and red pocket square, black belt, black shoes,
+// and black-rimmed glasses. dir: 0 down, 1 up, 2 left, 3 right.
+function drawGm(ctx: CanvasRenderingContext2D, ox: number, oy: number, dir: number, frame: number) {
+  const px = (x: number, y: number, c: string) => { ctx.fillStyle = c; ctx.fillRect(ox + x, oy + y, 1, 1) }
+  const r = (x: number, y: number, w: number, h: number, c: string) => { ctx.fillStyle = c; ctx.fillRect(ox + x, oy + y, w, h) }
+  const S = P.skin, H = P.hair, N = P.navy, ND = P.navyDk, W = '#f2f2f2', RED = P.red, BLK = '#141414'
+
+  // Head + hair
+  r(4, 2, 8, 8, S)
+  if (dir === 1) {
+    r(4, 2, 8, 7, H) // back of head
+  } else {
+    r(4, 2, 8, 3, H)
+    // Black-rimmed glasses
+    if (dir === 0) {
+      r(5, 5, 2, 2, BLK)
+      r(9, 5, 2, 2, BLK)
+      px(7, 5, BLK)
+      px(8, 5, BLK)
+    } else if (dir === 2) {
+      r(4, 5, 3, 2, BLK)
+      px(7, 5, BLK)
+    } else if (dir === 3) {
+      r(9, 5, 3, 2, BLK)
+      px(8, 5, BLK)
+    }
+  }
+
+  // Suit jacket (torso) + sleeves
+  r(4, 10, 8, 8, N)
+  r(4, 10, 8, 1, ND) // shoulder line
+  r(3, 11, 1, 5, N)
+  r(12, 11, 1, 5, N)
+  px(3, 16, ND)
+  px(12, 16, ND)
+
+  if (dir === 0) {
+    // Front: shirt placket, lapels, red tie, red pocket square
+    r(7, 10, 2, 6, W)
+    px(6, 10, W)
+    px(9, 10, W)
+    r(5, 11, 1, 3, ND)
+    r(10, 11, 1, 3, ND)
+    r(7, 11, 2, 5, RED)
+    px(7, 16, RED)
+    px(5, 13, RED)
+    px(5, 14, RED)
+  } else if (dir === 1) {
+    // Back: collar only
+    r(5, 10, 6, 1, ND)
+    px(7, 10, W)
+    px(8, 10, W)
+  } else {
+    // Profile: sliver of shirt/tie + pocket square hint
+    r(7, 10, 1, 5, W)
+    px(7, 11, RED)
+    px(7, 12, RED)
+    px(dir === 2 ? 6 : 9, 13, RED)
+  }
+
+  // Black belt
+  r(4, 17, 8, 1, BLK)
+
+  // Navy trousers + black shoes
+  if (frame === 0) {
+    r(5, 18, 3, 4, N)
+    r(9, 18, 3, 4, N)
+    r(5, 22, 3, 2, BLK)
+    r(9, 22, 3, 2, BLK)
+  } else {
+    r(4, 18, 3, 4, N)
+    r(10, 18, 3, 4, N)
+    r(4, 22, 3, 2, BLK)
+    r(10, 22, 3, 2, BLK)
+  }
+}
+
 /** Animated 8-frame sheet (4 directions × 2 frames), 16×24 each. */
 export function bakeCharSheet(paletteKey: string, acc: Accessory = 'none'): string {
   const p = CHAR_PALETTES[paletteKey]
@@ -275,7 +353,8 @@ export function bakeCharSheet(paletteKey: string, acc: Accessory = 'none'): stri
   let f = 0
   for (let dir = 0; dir < 4; dir++)
     for (let frame = 0; frame < 2; frame++) {
-      drawChar(ctx, f * 16, 0, p, dir, frame, acc)
+      if (paletteKey === 'gm') drawGm(ctx, f * 16, 0, dir, frame)
+      else drawChar(ctx, f * 16, 0, p, dir, frame, acc)
       f++
     }
   return c.toDataURL()
