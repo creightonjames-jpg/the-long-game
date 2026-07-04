@@ -23,12 +23,9 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: club-gm-simulator/package-lock.json
       - name: Install dependencies
-        working-directory: club-gm-simulator
         run: npm ci
       - name: Build (GitHub Pages base path)
-        working-directory: club-gm-simulator
         run: npm run build
         env:
           GITHUB_PAGES: "true"
@@ -38,7 +35,7 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: club-gm-simulator/dist
+          path: dist
 
   deploy:
     needs: build
