@@ -186,6 +186,8 @@ export const CHAR_PALETTES: Record<string, CharPalette> = {
   fnb: { skin: P.skin, hair: '#2a2a2a', shirt: '#6a3d8a', shirtDk: '#4e2c66', pants: P.dark },
   suit: { skin: P.skin, hair: '#6a6a6a', shirt: '#8a8f98', shirtDk: '#666b73', pants: P.dark },
   staff: { skin: P.skin, hair: '#2a2a1a', shirt: '#2f8f8a', shirtDk: '#1f6a66', pants: P.dark },
+  membership: { skin: P.skin, hair: '#4a3520', shirt: '#2f7d8a', shirtDk: '#1f5d68', pants: P.dark },
+  hr: { skin: P.skin, hair: '#5a4a3a', shirt: '#6a4a7c', shirtDk: '#4e3560', pants: P.dark },
 }
 
 export type Accessory = 'none' | 'toque' | 'cap' | 'visor' | 'sunhat' | 'tie' | 'apron'

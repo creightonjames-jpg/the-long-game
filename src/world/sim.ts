@@ -14,9 +14,15 @@ import { SEASON_SCRIPTS } from './scripts'
 import { XFACTORS } from './events/xfactors'
 import { DUTIES } from './events/duties'
 import { HEARD_EVENTS } from './events/heard'
+import { DIRECTOR_XFACTORS, DIRECTOR_DUTIES } from './events/directors'
+
+// Everything the day planner draws from. Duties and X-factors are pooled so
+// the new department-head situations mix into the same randomized rotation.
+const XFACTOR_POOL: EventDef[] = [...XFACTORS, ...DIRECTOR_XFACTORS]
+const DUTY_POOL: EventDef[] = [...DUTIES, ...DIRECTOR_DUTIES]
 
 export const ALL_EVENTS: Record<string, EventDef> = Object.fromEntries(
-  [...XFACTORS, ...DUTIES, ...HEARD_EVENTS].map((e) => [e.id, e]),
+  [...XFACTOR_POOL, ...DUTY_POOL, ...HEARD_EVENTS].map((e) => [e.id, e]),
 )
 
 export type WorldAction =
@@ -68,35 +74,43 @@ function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)]
 }
 
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+/** Draw `n` fresh event ids from a pool, avoiding repeats until it runs dry. */
+function drawFresh(pool: EventDef[], used: string[], n: number): string[] {
+  let fresh = pool.filter((e) => !used.includes(e.id))
+  if (fresh.length < n) fresh = [...pool]
+  return shuffle(fresh).slice(0, n).map((e) => e.id)
+}
+
+// Everything is drawn at random each day so no two playthroughs — or two
+// players — get the same run: duties, X-factors, and the HEARD complaint all
+// pull from shuffled pools. Season scripts drive the narrative frame; they no
+// longer dictate which situations appear.
 function buildDayPlan(state: WorldState): DayPlanItem[] {
-  const script = SEASON_SCRIPTS[state.seasonIndex]
   const plan: DayPlanItem[] = []
 
-  // Scheduled duties at morning + early afternoon.
-  const dutyTimes = [90, 330]
-  const duties = script.dutyIds[state.day] ?? []
-  duties.forEach((id, i) => {
-    if (ALL_EVENTS[id]) plan.push({ defId: id, at: dutyTimes[i] ?? 200 })
-  })
-
-  // Random X-factors: 2, sometimes 3 — no repeats until the pool runs dry.
-  let fresh = XFACTORS.filter((x) => !state.usedEventIds.includes(x.id))
-  if (fresh.length < 3) fresh = XFACTORS
-  const count = 2 + (Math.random() < 0.45 ? 1 : 0)
-  const chosen: string[] = []
-  while (chosen.length < count && fresh.length > 0) {
-    const x = pick(fresh)
-    fresh = fresh.filter((f) => f.id !== x.id)
-    chosen.push(x.id)
-  }
-  chosen.forEach((id) => plan.push({ defId: id, at: 120 + Math.floor(Math.random() * 520) }))
-
-  // One HEARD complaint per season, on a random day.
-  const heardFresh = HEARD_EVENTS.filter((h) => !state.usedEventIds.includes(h.id))
-  const heardScheduledThisSeason = state.usedEventIds.some((id) =>
-    id.startsWith('heard-ev-') && false, // per-season tracking handled via random day gate below
+  // Two scheduled duties at slightly varied morning + afternoon slots.
+  const dutyTimes = [60 + Math.floor(Math.random() * 70), 290 + Math.floor(Math.random() * 90)]
+  drawFresh(DUTY_POOL, state.usedEventIds, 2).forEach((id, i) =>
+    plan.push({ defId: id, at: dutyTimes[i] ?? 200 }),
   )
-  void heardScheduledThisSeason
+
+  // Two or three X-factors at random times through the day.
+  const count = 2 + (Math.random() < 0.5 ? 1 : 0)
+  drawFresh(XFACTOR_POOL, state.usedEventIds, count).forEach((id) =>
+    plan.push({ defId: id, at: 120 + Math.floor(Math.random() * 560) }),
+  )
+
+  // A HEARD complaint surfaces some days (likelier late in a season).
+  const heardFresh = HEARD_EVENTS.filter((h) => !state.usedEventIds.includes(h.id))
   if (heardFresh.length > 0 && Math.random() < (state.day === DAYS_PER_SEASON - 1 ? 0.6 : 0.35)) {
     plan.push({ defId: pick(heardFresh).id, at: 200 + Math.floor(Math.random() * 300) })
   }

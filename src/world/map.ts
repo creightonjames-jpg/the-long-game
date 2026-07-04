@@ -169,6 +169,8 @@ export const NPCS: NpcSpec[] = [
   { id: 'elena', name: 'Elena Ruiz', role: 'F&B Director', category: 'staff', palette: 'fnb', accessory: 'apron', tx: 8, ty: 37, flavor: '"Forty-two covers on the books tonight. The room will sing."' },
   { id: 'catering', name: 'Danielle Cho', role: 'Catering Director', category: 'staff', palette: 'staff', accessory: 'none', tx: 30, ty: 37, flavor: '"Saturday\'s floor plan is on your desk. Third revision. Don\'t ask."' },
   { id: 'controller', name: 'Priya Nair', role: 'Controller', category: 'staff', palette: 'suit', accessory: 'tie', tx: 6, ty: 45, flavor: '"Month-end close is Tuesday. I\'ll have the variance detail ready."' },
+  { id: 'membership', name: 'Renée Marchetti', role: 'Membership & Marketing Director', category: 'staff', palette: 'membership', accessory: 'tie', tx: 11, ty: 45, flavor: '"Two tours this afternoon and a waitlist inquiry. Momentum, finally."' },
+  { id: 'hr', name: 'Marcus Webb', role: 'HR Manager', category: 'staff', palette: 'hr', accessory: 'tie', tx: 3, ty: 46, flavor: '"My door\'s open. It\'s usually the quiet ones who need it."' },
   { id: 'facilities', name: 'Gus Hartley', role: 'Facilities Manager', category: 'staff', palette: 'suit', accessory: 'cap', tx: 29, ty: 45, flavor: '"Boiler\'s humming. She\'s older than both of us, but she\'s humming."' },
   { id: 'member2', name: 'Mr. Petrakis', role: 'Member', category: 'member', palette: 'board', accessory: 'none', tx: 5, ty: 4, flavor: '"Morning. Fine day for it, if the wind lays down on the back nine."' },
   { id: 'member3', name: 'The Vances', role: 'Member', category: 'member', palette: 'member', accessory: 'sunhat', tx: 33, ty: 24, flavor: '"The kids have their first lesson today. They\'re thrilled. We\'re nervous."' },
@@ -222,6 +224,12 @@ export const EVENT_ICONS: Record<string, { icon: string; anim: 'flicker' | 'bob'
   'x-dress-code': { icon: '👖', anim: 'bob' },
   'x-double-book': { icon: '📅', anim: 'bob' },
   'x-vip-walkin': { icon: '⭐', anim: 'flicker' },
+  'x-poaching': { icon: '🎯', anim: 'bob' },
+  'x-referral-surge': { icon: '📈', anim: 'flicker' },
+  'x-legacy-resign': { icon: '📜', anim: 'bob' },
+  'x-anon-complaint': { icon: '✉️', anim: 'bob' },
+  'x-overtime': { icon: '⏰', anim: 'bob' },
+  'x-reference-check': { icon: '🔍', anim: 'bob' },
 }
 
 export function eventIcon(id: string): { icon: string; anim: 'flicker' | 'bob' } {
