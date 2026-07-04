@@ -16,9 +16,10 @@ import {
 import { TILE, worldBus } from './bus'
 
 const SPEED = 96
-const ZOOM_MIN = 1.5
+const ZOOM_MIN = 0.5 // pull back far enough to see the whole property
 const ZOOM_MAX = 3.75
 const ZOOM_DEFAULT = 2.25
+const ZOOM_STEP = 0.25
 
 const CATEGORY_BG: Record<NpcCategory, string> = {
   member: '#a8851a',
@@ -147,7 +148,7 @@ export class WorldScene extends Phaser.Scene {
         this.lastTile = ''
       }),
       worldBus.on('zoom', ({ dir }: { dir: 'in' | 'out' }) => {
-        this.zoom = Phaser.Math.Clamp(this.zoom + (dir === 'in' ? 0.5 : -0.5), ZOOM_MIN, ZOOM_MAX)
+        this.zoom = Phaser.Math.Clamp(this.zoom + (dir === 'in' ? ZOOM_STEP : -ZOOM_STEP), ZOOM_MIN, ZOOM_MAX)
         this.cameras.main.zoomTo(this.zoom, 180)
       }),
       worldBus.on('marker:add', (m: { id: string; tx: number; ty: number; severity: number }) => this.addMarker(m)),

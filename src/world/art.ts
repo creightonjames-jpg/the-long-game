@@ -314,8 +314,8 @@ function drawGm(ctx: CanvasRenderingContext2D, ox: number, oy: number, dir: numb
     r(10, 11, 1, 3, ND)
     r(7, 11, 2, 5, RED)
     px(7, 16, RED)
-    px(5, 13, RED)
-    px(5, 14, RED)
+    px(10, 13, RED)
+    px(10, 14, RED)
   } else if (dir === 1) {
     // Back: collar only
     r(5, 10, 6, 1, ND)
