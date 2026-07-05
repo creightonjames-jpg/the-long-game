@@ -8,6 +8,8 @@ import type { WorldState } from '../../world/types'
 import { HEARD_COMPLAINTS } from '../../world/events/heard'
 import { earnedBadges } from '../../engine/scoring'
 import { recordRun } from '../../engine/persistence'
+import { isSfxEnabled, setSfxEnabled, sfx } from '../../engine/audio'
+import { isVoiceEnabled, setVoiceEnabled, stopSpeaking, voiceSupported } from '../../engine/speech'
 import { AlertToasts, EventOverlay, HeardOverlay, WorldHud } from './WorldUI'
 import { DayRecap, IntroScreen, SeasonScreen, WorldEnd } from './WorldScreens'
 import { TouchControls } from './TouchControls'
@@ -46,6 +48,8 @@ export default function WorldGame() {
   })
   const [portrait, setPortrait] = useState(false)
   const [hintDismissed, setHintDismissed] = useState(false)
+  const [sfxOn, setSfxOn] = useState(isSfxEnabled())
+  const [voiceOn, setVoiceOn] = useState(isVoiceEnabled())
 
   // --- Phaser mount (guarded: StrictMode double-mount and HMR safe) ---
   useEffect(() => {
@@ -102,20 +106,29 @@ export default function WorldGame() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  // --- Marker sync: diff active events into the scene ---
+  // --- Marker sync: diff active events into the scene (+ ding on new ones) ---
   const prevActiveRef = useRef<string[]>([])
   useEffect(() => {
     const now = state.active.map((a) => a.defId)
-    for (const id of now.filter((id) => !prevActiveRef.current.includes(id))) {
+    const added = now.filter((id) => !prevActiveRef.current.includes(id))
+    for (const id of added) {
       const def = ALL_EVENTS[id]
       const anchor = def && ANCHORS[def.zone]
       if (anchor) worldBus.emit('marker:add', { id, ...anchor, severity: def.severity })
     }
+    if (added.length > 0 && state.screen === 'play') sfx('alert')
     for (const id of prevActiveRef.current.filter((id) => !now.includes(id))) {
       worldBus.emit('marker:remove', { id })
     }
     prevActiveRef.current = now
-  }, [state.active])
+  }, [state.active, state.screen])
+
+  // --- Screen-transition sound effects ---
+  useEffect(() => {
+    if (state.screen === 'event' || state.screen === 'heard') sfx('open')
+    else if (state.screen === 'recap') sfx('recap')
+    else if (state.screen === 'end') sfx(state.gameOver?.reason === 'completed' ? 'win' : 'lose')
+  }, [state.screen, state.gameOver])
 
   // --- Interaction: handles the nearest event, else chats with an NPC ---
   const near = nearestInteraction(state, gmTile)
@@ -223,9 +236,14 @@ export default function WorldGame() {
           <WorldHud
             state={state}
             paused={userPaused}
+            sfxOn={sfxOn}
+            voiceOn={voiceOn}
+            voiceSupported={voiceSupported()}
             onWait={() => dispatch({ type: 'TICK', minutes: 60 })}
             onPause={() => setUserPaused((v) => !v)}
             onZoom={(dir) => worldBus.emit('zoom', { dir })}
+            onToggleSfx={() => { const v = !sfxOn; setSfxEnabled(v); setSfxOn(v); if (v) sfx('select') }}
+            onToggleVoice={() => { const v = !voiceOn; setVoiceEnabled(v); setVoiceOn(v); if (!v) stopSpeaking() }}
           />
           <AlertToasts state={state} />
         </>

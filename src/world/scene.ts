@@ -14,6 +14,7 @@ import {
   type NpcCategory,
 } from './map'
 import { TILE, worldBus } from './bus'
+import { sfx } from '../engine/audio'
 
 const SPEED = 96
 const ZOOM_MIN = 0.5 // pull back far enough to see the whole property
@@ -226,6 +227,7 @@ export class WorldScene extends Phaser.Scene {
       if (tp) {
         this.gm.setPosition(tp.tx * TILE + 8, tp.ty * TILE + 12)
         this.lastTile = `${tp.tx},${tp.ty}`
+        sfx('door')
         worldBus.emit('gmTile', { tx: tp.tx, ty: tp.ty, zone: zoneAt(tp.tx, tp.ty) })
         return
       }

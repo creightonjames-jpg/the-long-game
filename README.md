@@ -45,6 +45,13 @@ Classic mode (v1 text scenarios) remains available from the start screen.
 `?touch` to the URL to force the touch controls on any device (QA / fallback).
 Classic mode works on any phone as-is.
 
+**Audio:** the HUD has two toggles — 🔊 sound effects (NES-style, synthesized
+in code via Web Audio; on by default) and 🗣 read-aloud (browser text-to-speech
+that narrates scenarios, feedback, and mentor briefings; off by default). Both
+persist per browser. Read-aloud works on any text, including Scenario Studio
+content. High-fidelity AI voice (e.g. per-character ElevenLabs) is a possible
+future upgrade layered over the same hooks.
+
 ## Run it
 
 ```bash

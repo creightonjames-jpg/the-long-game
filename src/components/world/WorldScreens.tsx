@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { isVoiceEnabled, speak, stopSpeaking } from '../../engine/speech'
 import type { StatKey } from '../../engine/types'
 import { STAT_LABELS } from '../../engine/types'
 import { earnedBadges } from '../../engine/scoring'
@@ -130,6 +131,12 @@ export function SeasonScreen({
 }) {
   const script = SEASON_SCRIPTS[state.seasonIndex]
   const reviewing = state.seasonGrades.length === state.seasonIndex + 1
+  // Read the mentor's briefing aloud (if read-aloud is on).
+  useEffect(() => {
+    if (!reviewing) speak(script.mentorIntro.replace(/"/g, ''))
+    return () => stopSpeaking()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.seasonIndex, reviewing])
   if (!reviewing) {
     return (
       <Shell>
@@ -138,9 +145,20 @@ export function SeasonScreen({
         </p>
         <h2 className="font-display text-3xl text-club-800 font-bold mb-5">{script.title}</h2>
         <div className="bg-cream-100 border-l-4 border-gold-500 rounded-r-lg p-5 mb-5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gold-600 mb-2">
-            Your mentor — Century Golf regional director
-          </p>
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gold-600">
+              Your mentor — Century Golf regional director
+            </p>
+            {isVoiceEnabled() && (
+              <button
+                onClick={() => speak(script.mentorIntro.replace(/"/g, ''))}
+                className="shrink-0 text-gold-600 border border-gold-500/40 rounded-full w-7 h-7 hover:bg-gold-500/10"
+                title="Read aloud"
+              >
+                🔊
+              </button>
+            )}
+          </div>
           <p className="text-sm text-club-900/80 leading-relaxed italic">{script.mentorIntro}</p>
         </div>
         <p className="text-sm text-club-900/80 mb-6">
